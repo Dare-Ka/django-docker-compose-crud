@@ -1,0 +1,52 @@
+networks:
+    stocks_products-network:
+
+services:
+  stocks_products:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      -  ./stocks_products/.env
+    volumes:
+      - .:/app
+      - static_volume:/static
+    depends_on:
+      - postgres-db
+    networks:
+      - stocks_products-network
+
+  postgres-db:
+    image: "postgres:alpine"
+    container_name: postgres
+    env_file:
+      - .db_env
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    networks:
+      - stocks_products-network
+
+  nginx:
+    build: nginx-conf
+    volumes:
+      - ./nginx-conf/nginx.conf:/etc/nginx/nginx.conf
+      - static_volume:/static
+    ports:
+      - "80:80"
+    depends_on:
+      - stocks_products
+    networks:
+      - stocks_products-network
+
+volumes:
+  static_volume:
+  postgres_data:
